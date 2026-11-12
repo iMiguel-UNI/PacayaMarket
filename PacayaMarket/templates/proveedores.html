@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Proveedores{% endblock %}
+{% block body %}
+<h2>Proveedores</h2>
+<form class="card form" method="post" action="{{ url_for('proveedores_guardar') }}">
+  {% if editar %}<input type="hidden" name="id" value="{{ editar.id }}">{% endif %}
+  <div><label>Proveedor</label><input name="nombre" required value="{{ editar.nombre if editar }}"></div>
+  <div><label>Persona de contacto</label><input name="contacto" value="{{ editar.contacto or '' if editar }}"></div>
+  <div><label>Teléfono</label><input name="telefono" value="{{ editar.telefono or '' if editar }}"></div>
+  <div style="grid-column:span 2"><label>Notas (días de visita, condiciones de pago...)</label><input name="notas" value="{{ editar.notas or '' if editar }}"></div>
+  <div>
+    <button class="btn btn-ok">{{ 'Guardar cambios' if editar else 'Agregar proveedor' }}</button>
+    {% if editar %}<a class="btn" href="{{ url_for('proveedores') }}">Cancelar</a>{% endif %}
+  </div>
+</form>
+<div class="card">
+  {% if lista %}
+  <table>
+    <tr><th>Proveedor</th><th>Contacto</th><th>Teléfono</th><th>Productos que surte</th><th>Notas</th><th></th></tr>
+    {% for p in lista %}
+    <tr>
+      <td>{{ p.nombre }}</td><td>{{ p.contacto or '—' }}</td><td>{{ p.telefono or '—' }}</td>
+      <td>{% if p.n %}<span class="tag">{{ p.n }}</span> <span class="mut">{{ p.productos }}</span>{% else %}<span class="mut">Ninguno</span>{% endif %}</td>
+      <td class="mut">{{ p.notas or '' }}</td>
+      <td class="r">
+        <a class="btn btn-sm" href="{{ url_for('proveedores', editar=p.id) }}">Editar</a>
+        <form class="inline" method="post" action="{{ url_for('proveedores_eliminar', pid=p.id) }}" onsubmit="return confirm('¿Eliminar a {{ p.nombre|e }}? Sus productos quedarán sin proveedor.')">
+          <button class="btn btn-bad btn-sm">Eliminar</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="mut">Aún no hay proveedores. Agrega el primero y luego asígnalo a sus productos.</p>{% endif %}
+</div>
+{% endblock %}

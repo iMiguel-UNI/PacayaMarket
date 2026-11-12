@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Caja{% endblock %}
+{% block body %}
+<div class="pos">
+  <section class="pos-l">
+    <input id="q" placeholder="Buscar producto por nombre (F2)" autofocus autocomplete="off">
+    <div id="aviso"></div>
+    <div class="chips" id="chips"></div>
+    <div id="prods"></div>
+  </section>
+  <aside class="cart">
+    <h3>Factura actual</h3>
+    <div id="items"></div>
+    <div class="total"><span>Total</span><span id="total">0.00</span></div>
+    <div style="margin-bottom:10px"><label>Efectivo recibido</label><input id="recibido" type="number" min="0" step="0.01"></div>
+    <p id="cambio" class="mut" style="margin:0 0 10px">Cambio: 0.00</p>
+    <button class="btn btn-ok btn-big" id="cobrar" style="width:100%">Cobrar (F9)</button>
+    <button class="btn" id="vaciar" style="width:100%;margin-top:8px">Vaciar</button>
+  </aside>
+</div>
+<script>
+const PRODUCTOS = {{ productos|tojson }};
+const MON = {{ n.moneda|tojson }};
+const CATS = ["Todos", ...{{ categorias|tojson }}];
+let cart = [], cat = "Todos";
+const $ = s => document.querySelector(s);
+const fmt = n => MON + " " + Number(n).toFixed(2);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const total = () => cart.reduce((s, i) => s + i.precio * i.cant, 0);
+
+function filtrados() {
+  const q = $("#q").value.trim().toLowerCase();
+  return PRODUCTOS.filter(p => (cat === "Todos" || p.categoria === cat) &&
+    (!q || p.nombre.toLowerCase().includes(q)));
+}
+function renderChips() {
+  $("#chips").innerHTML = CATS.map(c => `<button class="chip ${c===cat?'on':''}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+  document.querySelectorAll(".chip").forEach(b => b.onclick = () => { cat = b.dataset.c; renderChips(); renderProds(); });
+}
+function renderProds() {
+  const l = filtrados();
+  $("#prods").innerHTML = l.map(p => `<button class="prod ${p.stock<=0?'agotado':''}" onclick="add(${p.id})">
+    <b>${esc(p.nombre)}</b><span>${fmt(p.precio)}</span>${p.stock<=0?'<span class="tag bad">Agotado</span>':(p.stock<=p.stock_min?'<span class="tag warn">Quedan '+p.stock+'</span>':'<small>Stock: '+p.stock+'</small>')}</button>`).join("")
+    || '<p class="mut">Sin resultados. Agrega productos desde la sección Productos.</p>';
+}
+function add(id) {
+  const p = PRODUCTOS.find(x => x.id === id);
+  let it = cart.find(x => x.id === id);
+  const nueva = (it ? it.cant : 0) + 1;
+  if (nueva > p.stock) return alert(`Solo hay ${p.stock} de "${p.nombre}" en stock`);
+  if (it) it.cant = nueva; else cart.push({id, nombre: p.nombre, precio: p.precio, cant: 1, stock: p.stock});
+  renderCart();
+}
+function cambiar(id, d) {
+  const it = cart.find(x => x.id === id);
+  if (d > 0 && it.cant + 1 > it.stock) return alert(`Solo hay ${it.stock} en stock`);
+  it.cant += d;
+  if (it.cant <= 0) cart = cart.filter(x => x.id !== id);
+  renderCart();
+}
+function renderCart() {
+  $("#items").innerHTML = cart.map(i => `<div class="it"><div>${esc(i.nombre)}<br><small class="mut">${fmt(i.precio)}</small></div>
+    <div class="qty"><button onclick="cambiar(${i.id},-1)">−</button>${i.cant}<button onclick="cambiar(${i.id},1)">+</button></div>
+    <b>${fmt(i.precio*i.cant)}</b></div>`).join("") || '<p class="mut">Toca un producto para agregarlo.</p>';
+  $("#total").textContent = fmt(total());
+  calcCambio();
+}
+function calcCambio() {
+  const c = parseFloat($("#recibido").value || 0) - total();
+  $("#cambio").textContent = "Cambio: " + (c >= 0 ? fmt(c) : "falta " + fmt(-c));
+}
+async function cobrar() {
+  if (!cart.length) return alert("El carrito está vacío");
+  const r = await fetch("/api/venta", {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({items: cart.map(i => ({id: i.id, cant: i.cant})), metodo: "Efectivo",
+      recibido: $("#recibido").value || 0})});
+  const d = await r.json();
+  if (d.ok) location = "/ticket/" + d.id; else alert(d.error);
+}
+$("#q").addEventListener("input", renderProds);
+$("#q").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const q = e.target.value.trim().toLowerCase(), l = filtrados();
+  const p = l.length === 1 ? l[0] : null;
+  if (p) { add(p.id); e.target.value = ""; renderProds(); }
+});
+$("#recibido").oninput = calcCambio;
+$("#cobrar").onclick = cobrar;
+$("#vaciar").onclick = () => { cart = []; renderCart(); };
+document.addEventListener("keydown", e => {
+  if (e.key === "F9") { e.preventDefault(); cobrar(); }
+  if (e.key === "F2") { e.preventDefault(); $("#q").focus(); }
+});
+function avisoStock() {
+  const l = PRODUCTOS.filter(p => p.stock <= p.stock_min);
+  if (!l.length) return;
+  const txt = l.slice(0, 6).map(p => esc(p.nombre) + (p.stock <= 0 ? " (agotado)" : " (" + p.stock + ")")).join(", ");
+  $("#aviso").innerHTML = '<div class="alerta-caja">⚠ Pocas unidades: ' + txt + (l.length > 6 ? " y " + (l.length - 6) + " más" : "") + '</div>';
+}
+renderChips(); renderProds(); renderCart(); avisoStock();
+</script>
+{% endblock %}

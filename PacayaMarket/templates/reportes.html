@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+{% block body %}
+<h2>Reportes</h2>
+<form class="card form" method="get">
+  <div><label>Desde</label><input type="date" name="desde" value="{{ desde }}"></div>
+  <div><label>Hasta</label><input type="date" name="hasta" value="{{ hasta }}"></div>
+  <div><button class="btn btn-ok">Ver reporte</button>
+    <a class="btn" href="{{ url_for('reportes_csv', desde=desde, hasta=hasta) }}">Descargar ventas (Excel/CSV)</a>
+    <button type="button" class="btn" onclick="window.print()">Imprimir</button></div>
+</form>
+<div class="card resumen">
+  <h3>Resumen del período</h3>
+  <div class="linea"><span>Vendiste ({{ n }} facturas)</span><b>{{ total|m }}</b></div>
+  <div class="linea mut"><span>− Lo que te costó la mercancía vendida</span><b>{{ costo|m }}</b></div>
+  <div class="linea sub"><span>= Ganaste vendiendo</span><b>{{ ganancia|m }}</b></div>
+  <div class="linea mut"><span>− Mercancía perdida (merma)</span><b>{{ perdida|m }}</b></div>
+  <div class="linea final {{ 'neg' if neta < 0 else 'pos' }}"><span>= Resultado final</span><b>{{ neta|m }}</b></div>
+  <p class="mut" style="margin:10px 0 0">
+    {% if neta < 0 %}En este período la merma fue mayor que lo que ganaste vendiendo.
+    {% elif perdida > 0 %}Lo que ganaste vendiendo cubre la merma y todavía te queda ganancia.
+    {% else %}No hubo merma en este período.{% endif %}
+    Venta promedio por factura: {{ promedio|m }}.</p>
+</div>
+<div class="row">
+  <div class="card"><h3>Productos más vendidos</h3>
+    <table><tr><th>Producto</th><th class="r">Uds</th><th class="r">Vendido</th><th class="r">Ganancia</th></tr>
+    {% for t in top %}<tr><td>{{ t.nombre }}</td><td class="r">{{ t.u }}</td><td class="r">{{ t.t|m }}</td><td class="r">{{ t.g|m }}</td></tr>
+    {% else %}<tr><td colspan="4" class="mut">Sin ventas en el período.</td></tr>{% endfor %}</table></div>
+  <div class="card"><h3>Ventas por categoría</h3>
+    <table><tr><th>Categoría</th><th class="r">Uds</th><th class="r">Total</th></tr>
+    {% for c in por_cat %}<tr><td>{{ c.categoria }}</td><td class="r">{{ c.u }}</td><td class="r">{{ c.t|m }}</td></tr>
+    {% else %}<tr><td colspan="3" class="mut">Sin datos.</td></tr>{% endfor %}</table></div>
+</div>
+<div class="row">
+  <div class="card"><h3>Ventas por día</h3>
+    <table><tr><th>Día</th><th class="r">Facturas</th><th class="r">Total</th></tr>
+    {% for d in por_dia %}<tr><td>{{ d.dia }}</td><td class="r">{{ d.n }}</td><td class="r">{{ d.t|m }}</td></tr>
+    {% else %}<tr><td colspan="3" class="mut">Sin datos.</td></tr>{% endfor %}</table></div>
+  <div class="card"><h3>Por vendedor</h3>
+    <table><tr><th>Vendedor</th><th class="r">Facturas</th><th class="r">Total</th></tr>
+    {% for v in por_vend %}<tr><td>{{ v.nombre }}</td><td class="r">{{ v.n }}</td><td class="r">{{ v.t|m }}</td></tr>
+    {% else %}<tr><td colspan="3" class="mut">Sin datos.</td></tr>{% endfor %}</table></div>
+</div>
+<div class="row">
+  <div class="card"><h3>Merma por motivo</h3>
+    <table><tr><th>Motivo</th><th class="r">Uds</th><th class="r">Pérdida</th></tr>
+    {% for m in mermas %}<tr><td>{{ m.motivo }}</td><td class="r">{{ m.u }}</td><td class="r">{{ m.t|m }}</td></tr>
+    {% else %}<tr><td colspan="3" class="mut">Sin mermas en el período.</td></tr>{% endfor %}</table></div>
+  <div class="card"><h3>Inventario actual</h3>
+    <p>{{ inv.unidades }} unidades en stock</p>
+    <p>A costo: <b>{{ inv.costo|m }}</b></p>
+    <p>A precio de venta: <b>{{ inv.venta|m }}</b></p></div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Ventas{% endblock %}
+{% block body %}
+<h2>Ventas</h2>
+<form class="card form" method="get">
+  <div><label>Desde</label><input type="date" name="desde" value="{{ desde }}"></div>
+  <div><label>Hasta</label><input type="date" name="hasta" value="{{ hasta }}"></div>
+  <div><button class="btn btn-ok">Filtrar</button></div>
+</form>
+<div class="row">
+  <div class="card stat"><span class="mut">Total del período</span><b>{{ total|m }}</b></div>
+</div>
+<div class="card">
+  {% if lista %}
+  <table>
+    <tr><th>#</th><th>Fecha</th><th>Vendedor</th><th class="r">Total</th><th></th></tr>
+    {% for v in lista %}
+    <tr>
+      <td>#{{ v.id }}</td><td>{{ v.fecha }}</td><td>{{ v.vendedor }}</td>
+      <td class="r">{{ v.total|m }} {% if v.estado=='anulada' %}<span class="tag bad">anulada</span>{% endif %}</td>
+      <td class="r">
+        <a class="btn btn-sm" href="{{ url_for('ticket', vid=v.id) }}">Ver</a>
+        {% if session.rol=='admin' and v.estado=='ok' %}
+        <form class="inline" method="post" action="{{ url_for('anular', vid=v.id) }}" onsubmit="return confirm('¿Anular la factura #{{ v.id }}? El stock se devolverá.')">
+          <button class="btn btn-bad btn-sm">Anular</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="mut">No hay ventas en este período.</p>{% endif %}
+</div>
+{% endblock %}
