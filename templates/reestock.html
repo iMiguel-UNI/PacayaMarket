@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block titulo %}Órdenes de Reestock (Proveedores){% endblock %}
+
+{% block contenido %}
+<div style="display: flex; gap: 25px; align-items: flex-start;">
+
+    <!-- FORMULARIO NUEVO PEDIDO -->
+    <div class="card" style="flex: 1;">
+        <h3 style="margin-bottom: 18px; color: #0f172a;">
+            <i class="fa-solid fa-truck-ramp-box" style="color: var(--accent);"></i> Solicitar Pedido
+        </h3>
+
+        <form action="/reestock" method="POST">
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #475569;">Producto a Abastecer</label>
+                <select name="id_producto" id="selectProdReestock" required onchange="seleccionarProveedorAuto()"
+                        style="width: 100%; padding: 11px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-size: 14px;">
+                    <option value="" disabled selected>Elegir producto...</option>
+                    {% for p in productos %}
+                        <option value="{{ p['id_producto'] }}" data-prov="{{ p['id_proveedor'] }}">
+                            {{ p['nombre'] }} (Stock: {{ p['stock'] }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #475569;">Proveedor</label>
+                <select name="id_proveedor" id="selectProvReestock" required
+                        style="width: 100%; padding: 11px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-size: 14px;">
+                    {% for pr in proveedores %}
+                        <option value="{{ pr['id_proveedor'] }}">{{ pr['empresa'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #475569;">Cantidad Solicitada (Uds)</label>
+                <input type="number" name="cantidad_solicitada" min="1" required placeholder="Ej: 100"
+                       style="width: 100%; padding: 11px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #475569;">Costo Estimado (Opcional - C$)</label>
+                <input type="number" step="0.01" min="0" name="costo_total" value="0"
+                       style="width: 100%; padding: 11px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; justify-content: center; padding: 12px; background: #0f172a;">
+                <i class="fa-solid fa-paper-plane"></i> Generar Orden de Compra
+            </button>
+        </form>
+    </div>
+
+    <!-- HISTORIAL Y RECEPCIÓN DE ÓRDENES -->
+    <div class="card" style="flex: 2.3;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3><i class="fa-solid fa-clipboard-list" style="color: var(--accent);"></i> Control de Entregas y Lotes</h3>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Orden</th>
+                    <th>Fecha</th>
+                    <th>Producto / Proveedor</th>
+                    <th>Recibido / Pedido</th>
+                    <th>Costo Total</th>
+                    <th>Estado</th>
+                    <th style="text-align: center;">Recepción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in ordenes %}
+                <tr>
+                    <td style="font-weight: bold; color: #64748b;">#{{ o['id_orden'] }}</td>
+                    <td style="font-size: 13px;">{{ o['fecha_pedido'] }}</td>
+                    <td>
+                        <div style="font-weight: 600; color: #0f172a;">{{ o['producto'] }}</div>
+                        <div style="font-size: 12px; color: #64748b;">{{ o['proveedor'] }}</div>
+                    </td>
+                    <td style="font-weight: 600;">
+                        {{ o['cantidad_recibida'] }} / {{ o['cantidad_solicitada'] }} uds
+                    </td>
+                    <td style="font-weight: 700; color: #0f172a;">C$ {{ "%.2f"|format(o['costo_total']) }}</td>
+                    <td>
+                        {% if o['estado'] == 'Completada' %}
+                            <span class="badge-success">Completada</span>
+                        {% elif o['estado'] == 'Parcial' %}
+                            <span class="badge-warning">Parcial</span>
+                        {% else %}
+                            <span style="background: #e2e8f0; color: #334155; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if o['estado'] != 'Completada' %}
+                            <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px; background: #10b981;"
+                                    data-id="{{ o['id_orden'] }}"
+                                    data-producto="{{ o['producto'] }}"
+                                    data-faltante="{{ o['cantidad_solicitada'] - o['cantidad_recibida'] }}"
+                                    onclick="abrirModalRecibir(this)">
+                                <i class="fa-solid fa-check-to-slot"></i> Recibir
+                            </button>
+                        {% else %}
+                            <span style="color: #10b981; font-size: 13px;"><i class="fa-solid fa-circle-check"></i> Listo</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL RECIBIR MERCANCÍA -->
+<div id="modalRecibir" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 420px; max-width: 90%;">
+        <h3 style="margin-bottom: 8px;"><i class="fa-solid fa-boxes-packing" style="color: #10b981;"></i> Ingresar Mercancía a Bodega</h3>
+        <p id="recibirTitulo" style="font-size: 13px; color: #64748b; margin-bottom: 18px;"></p>
+        
+        <form id="formRecibir" method="POST">
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Unidades que Entraron Hoy</label>
+                <input type="number" name="unidades_recibidas" id="inputUnidadesRec" min="1" required
+                       style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Costo Total Pagado al Proveedor (C$)</label>
+                <input type="number" step="0.01" min="0.1" name="costo_total" required placeholder="Ej: 1500.00"
+                       style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <small style="color: #64748b; font-size: 11px;">Este monto definirá el nuevo costo unitario para calcular ganancias en caja.</small>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" onclick="cerrarModalRecibir()" style="background: #64748b;">Cancelar</button>
+                <button type="submit" class="btn" style="background: #10b981;">Confirmar Entrada</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function seleccionarProveedorAuto() {
+        const selectProd = document.getElementById('selectProdReestock');
+        const opcion = selectProd.options[selectProd.selectedIndex];
+        const idProv = opcion.getAttribute('data-prov');
+        if (idProv) {
+            document.getElementById('selectProvReestock').value = idProv;
+        }
+    }
+
+    function abrirModalRecibir(boton) {
+        document.getElementById('formRecibir').action = '/reestock/recibir/' + boton.dataset.id;
+        document.getElementById('recibirTitulo').innerText = `Producto: ${boton.dataset.producto} (Pendientes: ${boton.dataset.faltante} uds)`;
+        document.getElementById('inputUnidadesRec').value = boton.dataset.faltante;
+        document.getElementById('modalRecibir').style.display = 'flex';
+    }
+
+    function cerrarModalRecibir() {
+        document.getElementById('modalRecibir').style.display = 'none';
+    }
+</script>
+{% endblock %}

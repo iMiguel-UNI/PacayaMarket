@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Catálogo de Productos{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3><i class="fa-solid fa-tags" style="color: var(--accent);"></i> Consulta de Precios y Existencias</h3>
+        <input type="text" id="filtroCatalogo" placeholder="🔍 Buscar producto o categoría..." 
+               style="padding: 10px 15px; width: 320px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+    </div>
+
+    <table id="tablaCatalogo">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio Venta</th>
+                <th>Disponibilidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in productos %}
+            <tr>
+                <td style="color: #64748b; font-weight: bold;">#{{ p['id_producto'] }}</td>
+                <td style="font-weight: 600;">{{ p['nombre'] }}</td>
+                <td>{{ p['nombre_categoria'] }}</td>
+                <td style="font-weight: 700; color: #0f172a;">C$ {{ "%.2f"|format(p['precio_venta']) }}</td>
+                <td>
+                    {% if p['stock'] == 0 %}
+                        <span style="background: #fee2e2; color: #991b1b; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">Agotado (0)</span>
+                    {% elif p['stock'] <= 15 %}
+                        <span class="badge-warning">Bajo: {{ p['stock'] }} uds</span>
+                    {% else %}
+                        <span class="badge-success">{{ p['stock'] }} uds</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.getElementById('filtroCatalogo').addEventListener('keyup', function() {
+        let texto = this.value.toLowerCase();
+        let filas = document.querySelectorAll('#tablaCatalogo tbody tr');
+        
+        filas.forEach(fila => {
+            let producto = fila.cells[1].innerText.toLowerCase();
+            let categoria = fila.cells[2].innerText.toLowerCase();
+            fila.style.display = (producto.includes(texto) || categoria.includes(texto)) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

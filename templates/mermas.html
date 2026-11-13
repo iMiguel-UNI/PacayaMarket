@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block titulo %}Reportar Merma{% endblock %}
+
+{% block contenido %}
+<div style="display: flex; gap: 25px; align-items: flex-start;">
+    
+    <!-- FORMULARIO DE REPORTE -->
+    <div class="card" style="flex: 1;">
+        <h3 style="margin-bottom: 20px; color: #0f172a;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Nuevo Reporte de Pérdida
+        </h3>
+        
+        <form action="/mermas" method="POST">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #475569;">Producto Dañado / Vencido</label>
+                <select name="id_producto" id="selectProducto" required onchange="actualizarMaxStock()"
+                        style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: white;">
+                    <option value="" disabled selected>Seleccione un producto...</option>
+                    {% for p in productos %}
+                        <option value="{{ p['id_producto'] }}" data-stock="{{ p['stock'] }}">
+                            {{ p['nombre'] }} (Stock actual: {{ p['stock'] }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #475569;">Cantidad a Descontar</label>
+                <input type="number" name="cantidad" id="inputCantidad" min="1" required placeholder="Ej: 2"
+                       style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #475569;">Motivo de la Merma</label>
+                <select name="motivo" required
+                        style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: white;">
+                    <option value="Producto Vencido">Producto Vencido</option>
+                    <option value="Envase Roto / Derrame">Envase Roto / Derrame</option>
+                    <option value="Mal Estado / Descompuesto">Mal Estado / Descompuesto</option>
+                    <option value="Daño en Bodega">Daño en Bodega</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-danger" style="width: 100%; justify-content: center; padding: 13px;">
+                <i class="fa-solid fa-arrow-trend-down"></i> Registrar Merma y Descontar Stock
+            </button>
+        </form>
+    </div>
+
+    <!-- TABLA DE HISTORIAL -->
+    <div class="card" style="flex: 2;">
+        <h3 style="margin-bottom: 15px; color: #0f172a;">
+            <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Historial de Mermas Reportadas
+        </h3>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Cant.</th>
+                    <th>Motivo</th>
+                    <th>Reportado por</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if historial %}
+                    {% for m in historial %}
+                    <tr>
+                        <td style="font-size: 13px; color: #64748b;">{{ m['fecha'] }}</td>
+                        <td style="font-weight: 600;">{{ m['producto'] }}</td>
+                        <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">-{{ m['cantidad'] }}</span></td>
+                        <td>{{ m['motivo'] }}</td>
+                        <td style="font-size: 13px;">{{ m['empleado'] }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 30px;">No hay mermas registradas todavía.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // Evita que el vendedor ponga una cantidad mayor al stock disponible
+    function actualizarMaxStock() {
+        const select = document.getElementById('selectProducto');
+        const opcion = select.options[select.selectedIndex];
+        const maxStock = opcion.getAttribute('data-stock');
+        const inputCant = document.getElementById('inputCantidad');
+        
+        if (maxStock) {
+            inputCant.max = maxStock;
+        }
+    }
+</script>
+{% endblock %}

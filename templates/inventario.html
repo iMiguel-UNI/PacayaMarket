@@ -1,49 +1,72 @@
 {% extends "base.html" %}
-
-{% block titulo %}Control de Stock{% endblock %}
+{% block titulo %}Control de Inventario (Admin){% endblock %}
 
 {% block contenido %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2><i class="fa-solid fa-boxes-stacked" style="color: var(--accent);"></i> Inventario Pacayita</h2>
-    <a href="/nuevo_producto" class="btn" style="text-decoration: none;">
-        <i class="fa-solid fa-plus"></i> Nuevo Producto
-    </a>
-</div>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h3><i class="fa-solid fa-boxes-stacked" style="color: var(--accent);"></i> Gestión General de Productos</h3>
+            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Agregá artículos nuevos, ajustá precios o corregí existencias en bodega.</p>
+        </div>
+        
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="text" id="buscarInv" placeholder="🔍 Filtrar producto, categoría o proveedor..." 
+                   style="padding: 10px 15px; width: 300px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+            
+            <button type="button" class="btn" onclick="abrirModalNuevo()" style="background: #10b981;">
+                <i class="fa-solid fa-plus"></i> Nuevo Producto
+            </button>
+        </div>
+    </div>
 
-<div class="table-container">
-    <table>
+    <table id="tablaInv">
         <thead>
             <tr>
-                <th>Código</th>
+                <th>ID</th>
                 <th>Producto</th>
                 <th>Categoría</th>
-                <th>Precio (C$)</th>
+                <th>Proveedor</th>
+                <th>Precio Venta</th>
                 <th>Stock</th>
-                <th>Acciones</th>
+                <th style="text-align: center;">Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for p in productos %}
             <tr>
-                <td>#{{ p['id_producto'] }}</td>
+                <td style="color: #64748b; font-weight: bold;">#{{ p['id_producto'] }}</td>
                 <td style="font-weight: 600;">{{ p['nombre'] }}</td>
                 <td>{{ p['nombre_categoria'] }}</td>
-                <td>C$ {{ "%.2f"|format(p['precio_venta']) }}</td>
+                <td style="font-size: 13px; color: #475569;">{{ p['nombre_proveedor'] }}</td>
+                <td style="font-weight: 700; color: #0f172a;">C$ {{ "%.2f"|format(p['precio_venta']) }}</td>
                 <td>
-                    <span class="badge-stock {% if p['stock'] > 15 %}stock-ok{% else %}stock-low{% endif %}">
-                        {{ p['stock'] }}
-                    </span>
+                    {% if p['stock'] == 0 %}
+                        <span style="background: #fee2e2; color: #991b1b; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">0 uds</span>
+                    {% elif p['stock'] <= 15 %}
+                        <span class="badge-warning">{{ p['stock'] }} uds</span>
+                    {% else %}
+                        <span class="badge-success">{{ p['stock'] }} uds</span>
+                    {% endif %}
                 </td>
-                <td>
-                    <button class="btn-sm btn-edit"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-sm btn-delete"><i class="fa-solid fa-trash"></i></button>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 30px;">
-                    <i class="fa-solid fa-box-open" style="font-size: 40px; color: #cbd5e1; margin-bottom: 10px;"></i>
-                    <p>No hay productos en el inventario.</p>
+                <td style="text-align: center; display: flex; justify-content: center; gap: 8px;">
+                    <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px; background: #0284c7;"
+                            data-id="{{ p['id_producto'] }}"
+                            data-nombre="{{ p['nombre'] }}"
+                            data-cat="{{ p['id_categoria'] }}"
+                            data-prov="{{ p['id_proveedor'] }}"
+                            data-precio="{{ p['precio_venta'] }}"
+                            data-stock="{{ p['stock'] }}"
+                            onclick="abrirModalEditar(this)">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    
+                    <form action="/inventario/eliminar/{{ p['id_producto'] }}" method="POST" style="margin: 0;"
+                          data-nombre="{{ p['nombre'] }}"
+                          onsubmit="return confirmarEliminacion(this)">
+                        <button type="submit" class="btn" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
@@ -51,5 +74,137 @@
     </table>
 </div>
 
-<script src="{{ url_for('static', filename='inventario.js') }}"></script>
+<!-- MODAL NUEVO PRODUCTO -->
+<div id="modalNuevo" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 480px; max-width: 90%; position: relative;">
+        <h3 style="margin-bottom: 18px;"><i class="fa-solid fa-box-open" style="color: #10b981;"></i> Registrar Nuevo Producto</h3>
+        <form action="/inventario/agregar" method="POST">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Nombre del Producto</label>
+                <input type="text" name="nombre" required placeholder="Ej: Gaseosa Coca-Cola 2L" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Categoría</label>
+                    <select name="id_categoria" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: white;">
+                        {% for c in categorias %}
+                            <option value="{{ c['id_categoria'] }}">{{ c['nombre_categoria'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Proveedor</label>
+                    <select name="id_proveedor" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: white;">
+                        {% for pr in proveedores %}
+                            <option value="{{ pr['id_proveedor'] }}">{{ pr['empresa'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Costo Compra (C$)</label>
+                    <input type="number" step="0.01" min="0.1" name="costo_unitario" required placeholder="0.00" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Precio Venta (C$)</label>
+                    <input type="number" step="0.01" min="0.5" name="precio_venta" required placeholder="0.00" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Stock Inicial</label>
+                    <input type="number" min="0" name="stock" required placeholder="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" onclick="cerrarModales()" style="background: #64748b;">Cancelar</button>
+                <button type="submit" class="btn" style="background: #10b981;">Guardar Producto</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR PRODUCTO -->
+<div id="modalEditar" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 460px; max-width: 90%;">
+        <h3 style="margin-bottom: 18px;"><i class="fa-solid fa-pen-to-square" style="color: #0284c7;"></i> Editar Producto</h3>
+        <form id="formEditar" method="POST">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Nombre del Producto</label>
+                <input type="text" name="nombre" id="editNombre" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Categoría</label>
+                    <select name="id_categoria" id="editCategoria" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: white;">
+                        {% for c in categorias %}
+                            <option value="{{ c['id_categoria'] }}">{{ c['nombre_categoria'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Proveedor</label>
+                    <select name="id_proveedor" id="editProveedor" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: white;">
+                        {% for pr in proveedores %}
+                            <option value="{{ pr['id_proveedor'] }}">{{ pr['empresa'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Precio Venta (C$)</label>
+                    <input type="number" step="0.01" min="0.5" name="precio_venta" id="editPrecio" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Stock Actual</label>
+                    <input type="number" min="0" name="stock" id="editStock" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" onclick="cerrarModales()" style="background: #64748b;">Cancelar</button>
+                <button type="submit" class="btn" style="background: #0284c7;">Actualizar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function abrirModalNuevo() {
+        document.getElementById('modalNuevo').style.display = 'flex';
+    }
+
+    function abrirModalEditar(boton) {
+        document.getElementById('formEditar').action = '/inventario/editar/' + boton.dataset.id;
+        document.getElementById('editNombre').value = boton.dataset.nombre;
+        document.getElementById('editCategoria').value = boton.dataset.cat;
+        document.getElementById('editProveedor').value = boton.dataset.prov;
+        document.getElementById('editPrecio').value = boton.dataset.precio;
+        document.getElementById('editStock').value = boton.dataset.stock;
+        document.getElementById('modalEditar').style.display = 'flex';
+    }
+
+    function confirmarEliminacion(formulario) {
+        return confirm(`¿Seguro que querés eliminar "${formulario.dataset.nombre}"? (Si ya tiene ventas registradas, la BD bloqueará el borrado por seguridad)`);
+    }
+
+    function cerrarModales() {
+        document.getElementById('modalNuevo').style.display = 'none';
+        document.getElementById('modalEditar').style.display = 'none';
+    }
+
+    document.getElementById('buscarInv').addEventListener('keyup', function() {
+        let filtro = this.value.toLowerCase();
+        let filas = document.querySelectorAll('#tablaInv tbody tr');
+        filas.forEach(fila => {
+            let textoFila = fila.innerText.toLowerCase();
+            fila.style.display = textoFila.includes(filtro) ? '' : 'none';
+        });
+    });
+</script>
 {% endblock %}

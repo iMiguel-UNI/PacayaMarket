@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block titulo %}Personal, Proveedores y Categorías{% endblock %}
+
+{% block contenido %}
+<div style="display: flex; flex-direction: column; gap: 25px;">
+
+    <!-- SECCIÓN 1: GESTIÓN DE EMPLEADOS Y USUARIOS -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h3><i class="fa-solid fa-users-gear" style="color: var(--accent);"></i> Equipo y Accesos al Sistema</h3>
+                <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Creá cuentas para nuevos cajeros, asigná roles o restablecé contraseñas.</p>
+            </div>
+            
+            <button type="button" class="btn" onclick="abrirModalUsuario()" style="background: #10b981;">
+                <i class="fa-solid fa-user-plus"></i> Nuevo Empleado
+            </button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre Completo</th>
+                    <th>Usuario (Login)</th>
+                    <th>Rol / Permisos</th>
+                    <th style="text-align: center;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td style="font-weight: bold; color: #64748b;">#{{ u['id_usuario'] }}</td>
+                    <td style="font-weight: 600;">{{ u['nombre'] }}</td>
+                    <td style="font-family: monospace; font-size: 14px; color: #0284c7;">{{ u['username'] }}</td>
+                    <td>
+                        {% if u['id_rol'] == 1 %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+                                <i class="fa-solid fa-crown"></i> Administrador
+                            </span>
+                        {% else %}
+                            <span class="badge-success">
+                                <i class="fa-solid fa-cash-register"></i> Vendedor / Cajero
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center; display: flex; justify-content: center; gap: 8px;">
+                        <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px; background: #0284c7;"
+                                data-id="{{ u['id_usuario'] }}"
+                                data-nombre="{{ u['nombre'] }}"
+                                data-username="{{ u['username'] }}"
+                                data-rol="{{ u['id_rol'] }}"
+                                onclick="abrirModalEditarUsuario(this)">
+                            <i class="fa-solid fa-pen"></i> Editar
+                        </button>
+
+                        {% if u['id_usuario'] != session.get('id_usuario') %}
+                        <form action="/empleados/eliminar/{{ u['id_usuario'] }}" method="POST" style="margin: 0;"
+                              data-nombre="{{ u['nombre'] }}"
+                              onsubmit="return confirmarBorrarUsuario(this)">
+                            <button type="submit" class="btn" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 2: PROVEEDORES Y CATEGORÍAS -->
+    <div style="display: flex; gap: 25px; flex-wrap: wrap; align-items: flex-start;">
+        
+        <!-- PROVEEDORES -->
+        <div class="card" style="flex: 1.4; min-width: 320px;">
+            <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-truck-field" style="color: var(--accent);"></i> Proveedores Registrados</h3>
+            
+            <form action="/proveedores/agregar" method="POST" style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+                <input type="text" name="empresa" required placeholder="Nombre de empresa..." 
+                       style="flex: 2; min-width: 160px; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+                {% if 'contacto' in cols_prov %}
+                <input type="text" name="contacto" placeholder="Contacto..." 
+                       style="flex: 1; min-width: 120px; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+                {% endif %}
+                {% if 'telefono' in cols_prov %}
+                <input type="text" name="telefono" placeholder="Teléfono..." 
+                       style="flex: 1; min-width: 110px; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+                {% endif %}
+                <button type="submit" class="btn" style="background: #0f172a;">
+                    <i class="fa-solid fa-plus"></i> Agregar
+                </button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Empresa</th>
+                        {% if 'contacto' in cols_prov %}<th>Contacto</th>{% endif %}
+                        {% if 'telefono' in cols_prov %}<th>Teléfono</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pr in proveedores %}
+                    <tr>
+                        <td style="color: #64748b; font-weight: bold;">#{{ pr['id_proveedor'] }}</td>
+                        <td style="font-weight: 600;">{{ pr['empresa'] }}</td>
+                        {% if 'contacto' in cols_prov %}<td>{{ pr['contacto'] or '-' }}</td>{% endif %}
+                        {% if 'telefono' in cols_prov %}<td>{{ pr['telefono'] or '-' }}</td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- CATEGORÍAS -->
+        <div class="card" style="flex: 1; min-width: 280px;">
+            <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-layer-group" style="color: var(--accent);"></i> Categorías</h3>
+            
+            <form action="/categorias/agregar" method="POST" style="display: flex; gap: 10px; margin-bottom: 18px;">
+                <input type="text" name="nombre_categoria" required placeholder="Nueva categoría (Ej: Lácteos)..." 
+                       style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+                <button type="submit" class="btn" style="background: #0f172a;">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre Categoría</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in categorias %}
+                    <tr>
+                        <td style="color: #64748b; font-weight: bold;">#{{ c['id_categoria'] }}</td>
+                        <td style="font-weight: 600;">{{ c['nombre_categoria'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL NUEVO USUARIO -->
+<div id="modalNuevoUsuario" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 430px; max-width: 90%;">
+        <h3 style="margin-bottom: 18px;"><i class="fa-solid fa-user-plus" style="color: #10b981;"></i> Registrar Empleado</h3>
+        <form action="/empleados/agregar" method="POST">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Nombre Completo</label>
+                <input type="text" name="nombre" required placeholder="Ej: Carlos Mendoza" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Usuario para Iniciar Sesión</label>
+                <input type="text" name="username" required placeholder="Ej: cmendoza" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Contraseña</label>
+                <input type="password" name="password" required placeholder="••••••••" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Rol en el Sistema</label>
+                <select name="id_rol" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: white;">
+                    <option value="2">Vendedor / Cajero</option>
+                    <option value="1">Administrador (Acceso Total)</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" onclick="cerrarModalesUsuario()" style="background: #64748b;">Cancelar</button>
+                <button type="submit" class="btn" style="background: #10b981;">Crear Cuenta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR USUARIO -->
+<div id="modalEditarUsuario" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 430px; max-width: 90%;">
+        <h3 style="margin-bottom: 18px;"><i class="fa-solid fa-user-pen" style="color: #0284c7;"></i> Editar Empleado</h3>
+        <form id="formEditarUsuario" method="POST">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Nombre Completo</label>
+                <input type="text" name="nombre" id="editUserNombre" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Usuario</label>
+                <input type="text" name="username" id="editUserUsername" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Nueva Contraseña (Dejar vacía para no cambiarla)</label>
+                <input type="password" name="password" placeholder="Nueva clave opcional..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;">Rol en el Sistema</label>
+                <select name="id_rol" id="editUserRol" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: white;">
+                    <option value="2">Vendedor / Cajero</option>
+                    <option value="1">Administrador (Acceso Total)</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" onclick="cerrarModalesUsuario()" style="background: #64748b;">Cancelar</button>
+                <button type="submit" class="btn" style="background: #0284c7;">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function abrirModalUsuario() {
+        document.getElementById('modalNuevoUsuario').style.display = 'flex';
+    }
+
+    function abrirModalEditarUsuario(boton) {
+        document.getElementById('formEditarUsuario').action = '/empleados/editar/' + boton.dataset.id;
+        document.getElementById('editUserNombre').value = boton.dataset.nombre;
+        document.getElementById('editUserUsername').value = boton.dataset.username;
+        document.getElementById('editUserRol').value = boton.dataset.rol;
+        document.getElementById('modalEditarUsuario').style.display = 'flex';
+    }
+
+    function cerrarModalesUsuario() {
+        document.getElementById('modalNuevoUsuario').style.display = 'none';
+        document.getElementById('modalEditarUsuario').style.display = 'none';
+    }
+
+    function confirmarBorrarUsuario(form) {
+        return confirm(`¿Seguro que querés eliminar al usuario "${form.dataset.nombre}"?`);
+    }
+</script>
+{% endblock %}

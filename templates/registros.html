@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block titulo %}Registros y Auditoría de Ventas{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h3><i class="fa-solid fa-file-invoice-dollar" style="color: var(--accent);"></i> Historial General de Facturas</h3>
+            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Auditá cada venta, revisá su margen de ganancia o anulá cobros erróneos devolviendo el stock.</p>
+        </div>
+        
+        <input type="text" id="buscarRegistro" placeholder="🔍 Buscar por N° ticket, fecha o vendedor..." 
+               style="padding: 10px 15px; width: 320px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
+    </div>
+
+    <table id="tablaRegistros">
+        <thead>
+            <tr>
+                <th>N° Ticket</th>
+                <th>Fecha y Hora</th>
+                <th>Vendedor</th>
+                <th>Artículos</th>
+                <th>Total Cobrado</th>
+                <th style="text-align: center;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in ventas %}
+            <tr>
+                <td style="font-weight: 700; color: #0f172a;">#{{ "%04d"|format(v['id_venta']) }}</td>
+                <td style="color: #64748b; font-size: 13px;">{{ v['fecha_hora'] }}</td>
+                <td style="font-weight: 600;">{{ v['vendedor'] }}</td>
+                <td><span class="badge-success">{{ v['cant_productos'] }} uds</span></td>
+                <td style="font-weight: 700; color: #166534;">C$ {{ "%.2f"|format(v['total']) }}</td>
+                <td style="text-align: center; display: flex; justify-content: center; gap: 8px;">
+                    <button type="button" class="btn" style="padding: 6px 12px; font-size: 12px; background: #0284c7;"
+                            data-id="{{ v['id_venta'] }}"
+                            data-ticket="#{{ '%04d'|format(v['id_venta']) }}"
+                            data-total="{{ '%.2f'|format(v['total']) }}"
+                            onclick="verDetalleVenta(this)">
+                        <i class="fa-solid fa-eye"></i> Ver Detalle
+                    </button>
+                    
+                    <form action="/registros/anular/{{ v['id_venta'] }}" method="POST" style="margin: 0;"
+                          data-ticket="#{{ '%04d'|format(v['id_venta']) }}"
+                          onsubmit="return confirmarAnulacion(this)">
+                        <button type="submit" class="btn" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">
+                            <i class="fa-solid fa-ban"></i> Anular
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL DETALLE DE FACTURA -->
+<div id="modalDetalle" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 620px; max-width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+            <h3 id="tituloDetalle"><i class="fa-solid fa-receipt" style="color: var(--accent);"></i> Detalle de Ticket</h3>
+            <button type="button" onclick="cerrarModalDetalle()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cant.</th>
+                    <th>Precio Venta</th>
+                    <th>Costo U.</th>
+                    <th>Subtotal</th>
+                    <th>Ganancia</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoDetalle">
+                <!-- Se llena con JS -->
+            </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 2px solid #f1f5f9;">
+            <div style="font-size: 14px; color: #475569;">
+                Ganancia neta del ticket: <strong id="gananciaTicket" style="color: #166534; font-size: 16px;">C$ 0.00</strong>
+            </div>
+            <div style="font-size: 16px; color: #0f172a;">
+                Total Factura: <strong id="totalTicket" style="font-size: 18px;">C$ 0.00</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function verDetalleVenta(boton) {
+        const idVenta = boton.dataset.id;
+        document.getElementById('tituloDetalle').innerHTML = `<i class="fa-solid fa-receipt" style="color: var(--accent);"></i> Detalle del Ticket ${boton.dataset.ticket}`;
+        document.getElementById('totalTicket').innerText = `C$ ${boton.dataset.total}`;
+        
+        const tbody = document.getElementById('cuerpoDetalle');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Cargando datos...</td></tr>';
+        document.getElementById('modalDetalle').style.display = 'flex';
+
+        fetch('/registros/detalle/' + idVenta)
+            .then(res => res.json())
+            .then(items => {
+                tbody.innerHTML = '';
+                let gananciaTotal = 0;
+
+                items.forEach(item => {
+                    gananciaTotal += item.ganancia;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: 600;">${item.producto}</td>
+                            <td>x${item.cantidad}</td>
+                            <td>C$ ${item.precio_unitario.toFixed(2)}</td>
+                            <td style="color: #64748b;">C$ ${item.costo_unitario.toFixed(2)}</td>
+                            <td style="font-weight: bold;">C$ ${item.subtotal.toFixed(2)}</td>
+                            <td style="color: #166534; font-weight: bold;">+C$ ${item.ganancia.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('gananciaTicket').innerText = `C$ ${gananciaTotal.toFixed(2)}`;
+            });
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modalDetalle').style.display = 'none';
+    }
+
+    function confirmarAnulacion(form) {
+        return confirm(`⚠️ ¿Seguro que querés ANULAR el ticket ${form.dataset.ticket}?\n\nEsta acción devolverá todos los productos al inventario y borrará la venta.`);
+    }
+
+    document.getElementById('buscarRegistro').addEventListener('keyup', function() {
+        let filtro = this.value.toLowerCase();
+        let filas = document.querySelectorAll('#tablaRegistros tbody tr');
+        filas.forEach(fila => {
+            fila.style.display = fila.innerText.toLowerCase().includes(filtro) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

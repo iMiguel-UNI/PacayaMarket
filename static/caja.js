@@ -1,4 +1,7 @@
-// Esperar a que cargue la página y asignarle el clic a todos los botones de agregar
+let carrito = [];
+let totalVenta = 0;
+
+// Soporta tanto el onclick directo como los botones con atributos data-
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-agregar').forEach(boton => {
         boton.addEventListener('click', function() {
@@ -6,18 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
             let nombre = this.getAttribute('data-nombre');
             let precio = parseFloat(this.getAttribute('data-precio'));
             let stock = parseInt(this.getAttribute('data-stock'));
-            
             agregarAlCarrito(id, nombre, precio, stock);
         });
     });
-});
 
-let carrito = [];
-let totalVenta = 0;
+    const buscador = document.getElementById('buscarProducto');
+    if (buscador) {
+        buscador.addEventListener('keyup', function() {
+            let filtro = this.value.toLowerCase();
+            let filas = document.querySelectorAll('#tablaProductos tbody tr');
+            
+            filas.forEach(fila => {
+                let nombre = fila.cells[0].innerText.toLowerCase();
+                fila.style.display = nombre.includes(filtro) ? '' : 'none';
+            });
+        });
+    }
+});
 
 // 1. Agregar producto al carrito
 function agregarAlCarrito(id, nombre, precio, stockMax) {
-    // Buscamos si ya está en el carrito
     let item = carrito.find(p => p.id === id);
     
     if (item) {
@@ -69,13 +80,13 @@ function actualizarCarrito() {
     calcularVuelto();
 }
 
-// 3. Quitar un producto de la lista (con la X roja)
+// 3. Quitar un producto de la lista
 function quitarDelCarrito(index) {
     carrito.splice(index, 1);
     actualizarCarrito();
 }
 
-// 4. Calcular vuelto automáticamente cuando escriben el billete
+// 4. Calcular vuelto automáticamente
 function calcularVuelto() {
     let efectivo = parseFloat(document.getElementById('efectivo').value) || 0;
     let vuelto = efectivo - totalVenta;
@@ -83,41 +94,45 @@ function calcularVuelto() {
     let vueltoDiv = document.getElementById('vuelto');
     if (vuelto < 0 || carrito.length === 0) {
         vueltoDiv.innerText = "C$ 0.00";
-        vueltoDiv.style.color = "#dc2626"; // Rojo si falta plata
+        vueltoDiv.style.color = "#dc2626";
     } else {
         vueltoDiv.innerText = `C$ ${vuelto.toFixed(2)}`;
-        vueltoDiv.style.color = "#166534"; // Verde si está todo bien
+        vueltoDiv.style.color = "#166534";
     }
 }
 
-// 5. Buscador rápido en la tabla
-document.getElementById('buscarProducto').addEventListener('keyup', function() {
-    let filtro = this.value.toLowerCase();
-    let filas = document.querySelectorAll('#tablaProductos tbody tr');
-    
-    filas.forEach(fila => {
-        let nombre = fila.cells[0].innerText.toLowerCase();
-        if(nombre.includes(filtro)) {
-            fila.style.display = '';
-        } else {
-            fila.style.display = 'none';
-        }
-    });
-});
-
-// 6. Botón de cobrar (Por ahora solo avisa, luego lo conectamos a la BD)
+// 5. Enviar la venta real a Python (/procesar_venta)
 function procesarVenta() {
     if (carrito.length === 0) {
-        alert("El carrito está vacío, loco.");
+        alert("El carrito está vacío.");
         return;
     }
     
     let efectivo = parseFloat(document.getElementById('efectivo').value) || 0;
     if (efectivo < totalVenta) {
-        alert("El maje no ha completado el pago. Faltan C$ " + (totalVenta - efectivo).toFixed(2));
+        alert("Falta dinero para completar el pago. Faltan C$ " + (totalVenta - efectivo).toFixed(2));
         return;
     }
 
-    alert("¡Venta cobrada con éxito! (En el próximo paso guardaremos esto en la Base de Datos)");
-    // Aquí mandaremos los datos a Python más adelante
+    fetch('/procesar_venta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carrito: carrito, total: totalVenta })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let cambio = (efectivo - totalVenta).toFixed(2);
+            alert(`✅ ¡Venta registrada en BD!\nTotal: C$ ${totalVenta.toFixed(2)}\nCambio a entregar: C$ ${cambio}`);
+            carrito = [];
+            document.getElementById('efectivo').value = '';
+            location.reload();
+        } else {
+            alert("❌ Error al guardar la venta: " + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("Error de conexión con el servidor.");
+    });
 }
