@@ -1,0 +1,156 @@
+/* --- TABLAS (INVENTARIO) --- */
+.table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #0f172a;
+    color: white;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 15px;
+}
+
+tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Badges para el stock */
+.badge-stock {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+.stock-ok { background: #dcfce7; color: #166534; }
+.stock-low { background: #fee2e2; color: #991b1b; }
+
+/* Botones de acción en la tabla */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+.btn-edit { background: #e0f2fe; color: #0284c7; margin-right: 5px; }
+.btn-edit:hover { background: #bae6fd; }
+.btn-delete { background: #fee2e2; color: #dc2626; }
+.btn-delete:hover { background: #fecaca; }
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    
+    /* ESTAS DOS SON LA MAGIA */
+    cursor: pointer; /* Obliga a que salga el dedito en vez de la rayita */
+    user-select: none; /* Evita que el texto se sombree como si lo fueras a copiar/editar */
+    
+    transition: color 0.2s;
+}
+
+th:hover {
+    color: #38bdf8; /* Hace que brille un poquito en celeste al pasar el mouse */
+}
+
+/* --- CAJA / PUNTO DE VENTA --- */
+.caja-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.productos-section {
+    flex: 2; /* Toma 2 tercios de la pantalla */
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.carrito-section {
+    flex: 1; /* Toma 1 tercio de la pantalla */
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 20px;
+}
+
+.carrito-items {
+    min-height: 200px;
+    max-height: 350px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+    background: #f8fafc;
+}
+
+.carrito-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #cbd5e1;
+    font-size: 14px;
+}
+.carrito-item:last-child { border-bottom: none; }
+
+.total-box {
+    background: #0f172a;
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: right;
+    margin-bottom: 15px;
+}
+.total-box h2 { color: #38bdf8; margin-top: 5px; font-size: 28px; }
+
+.cobrar-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    justify-content: center;
+}
+
+.input-efectivo {
+    width: 100%;
+    padding: 10px;
+    font-size: 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    text-align: right;
+}

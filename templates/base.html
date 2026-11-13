@@ -63,23 +63,42 @@
             <i class="fa-solid fa-basket-shopping"></i> Pacayita<span>Market</span>
         </div>
         
-        <div class="nav-links">
-            <a href="/caja"><i class="fa-solid fa-cash-register"></i> Punto de Venta</a>
-            <a href="/productos"><i class="fa-solid fa-tags"></i> Ver Productos</a>
-            
-            <div style="margin: 15px 0 5px 25px; font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Admin Panel</div>
-            
-            <a href="/inventario" class="active"><i class="fa-solid fa-boxes-stacked"></i> Control Stock</a>
-            <a href="/mermas"><i class="fa-solid fa-arrow-trend-down"></i> Mermas</a>
-            <a href="/reportes"><i class="fa-solid fa-chart-line"></i> Reportes Ventas</a>
-            <a href="/usuarios"><i class="fa-solid fa-users-gear"></i> Usuarios</a>
-        </div>
+ <div class="nav-links">
+    <!--  empleado  -->
+    <a href="/caja" class="{% if request.path == '/caja' %}active{% endif %}">
+        <i class="fa-solid fa-cash-register"></i> Punto de Venta
+    </a>
+    <a href="/productos" class="{% if request.path == '/productos' %}active{% endif %}">
+        <i class="fa-solid fa-tags"></i> Ver Productos
+    </a>
+    <a href="/mermas" class="{% if request.path == '/mermas' %}active{% endif %}">
+        <i class="fa-solid fa-arrow-trend-down"></i> Reportar Merma
+    </a>
+    <a href="/mis_ventas" class="{% if request.path == '/mis_ventas' %}active{% endif %}">
+        <i class="fa-solid fa-lock"></i> Cierre de Caja
+    </a>
+    
+  <!--  administrador  -->
+    {% if session.get('id_rol') == 1 or session.get('rol') == 'Administrador' %}
+    <div style="margin: 15px 0 5px 25px; font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Admin Panel</div>
+    
+    <a href="/inventario" class="{% if request.path == '/inventario' %}active{% endif %}"><i class="fa-solid fa-boxes-stacked"></i> Control Stock</a>
+    <a href="/reestock" class="{% if request.path == '/reestock' %}active{% endif %}"><i class="fa-solid fa-truck-moving"></i> Órdenes de Reestock</a>
+    <a href="/registros" class="{% if request.path == '/registros' %}active{% endif %}"><i class="fa-solid fa-clipboard-list"></i> Registros y Anulaciones</a>
+    <a href="/economia" class="{% if request.path == '/economia' %}active{% endif %}"><i class="fa-solid fa-chart-pie"></i> Economía</a>
+    <a href="/usuarios" class="{% if request.path == '/usuarios' %}active{% endif %}"><i class="fa-solid fa-users-gear"></i> Usuarios</a>
+    {% endif %}
+</div>
 
         <div class="user-profile">
-            <div class="avatar">MA</div>
+            <div class="avatar">{{ session.get('nombre', 'Usuario')[0]|upper }}</div>
             <div class="user-info">
-                <p>Miguel Admin</p>
-                <span>Nivel: Administrador</span>
+                <p>{{ session.get('nombre', 'Usuario Invitado') }}</p>
+                {% if session.get('id_rol') == 1 or session.get('rol') == 'Administrador' %}
+                    <span>Nivel: Administrador</span>
+                {% else %}
+                    <span>Nivel: Vendedor</span>
+                {% endif %}
             </div>
         </div>
     </div>

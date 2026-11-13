@@ -3,50 +3,53 @@
 {% block titulo %}Control de Stock{% endblock %}
 
 {% block contenido %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="color: #0f172a; margin: 0; font-size: 18px;">Inventario Principal</h3>
-        <button class="btn"><i class="fa-solid fa-plus"></i> Nuevo Producto</button>
-    </div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2><i class="fa-solid fa-boxes-stacked" style="color: var(--accent);"></i> Inventario Pacayita</h2>
+    <a href="/nuevo_producto" class="btn" style="text-decoration: none;">
+        <i class="fa-solid fa-plus"></i> Nuevo Producto
+    </a>
+</div>
 
+<div class="table-container">
     <table>
         <thead>
             <tr>
-                <th>Cód</th>
+                <th>Código</th>
                 <th>Producto</th>
                 <th>Categoría</th>
                 <th>Precio (C$)</th>
                 <th>Stock</th>
-                <th>Estado</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
+            {% for p in productos %}
             <tr>
-                <td style="font-weight: bold; color: #94a3b8;">#001</td>
-                <td style="font-weight: 600;">Coca-Cola 3 Litros</td>
-                <td>Bebidas</td>
-                <td>85.00</td>
-                <td style="font-weight: 600;">50</td>
-                <td><span class="badge-success">Disponible</span></td>
+                <td>#{{ p['id_producto'] }}</td>
+                <td style="font-weight: 600;">{{ p['nombre'] }}</td>
+                <td>{{ p['nombre_categoria'] }}</td>
+                <td>C$ {{ "%.2f"|format(p['precio_venta']) }}</td>
                 <td>
-                    <button class="btn" style="padding: 6px 12px; background: #e2e8f0; color: #334155;"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-danger" style="padding: 6px 12px;"><i class="fa-solid fa-trash"></i></button>
+                    <span class="badge-stock {% if p['stock'] > 15 %}stock-ok{% else %}stock-low{% endif %}">
+                        {{ p['stock'] }}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-sm btn-edit"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-sm btn-delete"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>
+            {% else %}
             <tr>
-                <td style="font-weight: bold; color: #94a3b8;">#002</td>
-                <td style="font-weight: 600;">Arroz Faisán 1lb</td>
-                <td>Abarrotes</td>
-                <td>22.00</td>
-                <td style="font-weight: 600; color: #ef4444;">5</td>
-                <td><span class="badge-warning">Reabastecer</span></td>
-                <td>
-                    <button class="btn" style="padding: 6px 12px; background: #e2e8f0; color: #334155;"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-danger" style="padding: 6px 12px;"><i class="fa-solid fa-trash"></i></button>
+                <td colspan="6" style="text-align: center; padding: 30px;">
+                    <i class="fa-solid fa-box-open" style="font-size: 40px; color: #cbd5e1; margin-bottom: 10px;"></i>
+                    <p>No hay productos en el inventario.</p>
                 </td>
             </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
+
+<script src="{{ url_for('static', filename='inventario.js') }}"></script>
 {% endblock %}
